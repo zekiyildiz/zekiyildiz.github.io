@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity 6</title>
+</head>
+<body>
+    <form action="forms.php" method="POST">
+        <table>
+            <tr>
+                <td>Name:</td>
+                <td>
+                    <input type="text" name="name_var">
+                </td>
+            </tr>
+            <tr>
+                <td>Username:</td>
+                <td>
+                    <input type="text" name="username_var">
+                </td>
+            </tr>
+            <tr>
+                <td>Password:</td>
+                <td>
+                    <input type="password" name="password_var">
+                </td>
+            </tr>
+            <tr>
+                <td>Address:</td>
+                <td>
+                    <input type="text" name="address_var">
+                </td>
+            </tr>
+            <tr>
+                <td>Country:</td>
+                <td>
+                   <select name="country_var" id="country_id">
+                    <option value="" disabled selected>(Please select a country)</option>
+                    <option value="USA">USA</option>
+                    <option value="UK">UK</option>
+                    <option value="Germany">Germany</option>
+                    <option value="France">France</option>
+                    <option value="Turkey">Turkey</option>
+                   </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Zipcode:</td>
+                <td>
+                    <input type="text" name="zipcode_var">
+                </td>
+            </tr>
+            <tr>
+                <td>Email:</td>
+                <td>
+                    <input type="email" name="email_var">
+                </td>
+            </tr>
+            <tr>
+                <td>Sex:</td>
+                <td>
+                    <input type="radio" name="sex_var" value="male"> Male
+                    <input type="radio" name="sex_var" value="female"> Female
+                </td>
+            </tr>
+            <tr>
+                <td>Language:</td>
+                <td>
+                    <input type="checkbox" name="language_var[]" value="English" checked> English
+                    <input type="checkbox" name="language_var[]" value="French"> French
+                    <input type="checkbox" name="language_var[]" value="German"> German
+                </td>
+            </tr>
+            <tr>
+                <td>About:</td>
+                <td>
+                    <textarea name="textarea_var" id="textarea_id" rows="5" cols="60"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <input type="submit" value="Submit">
+                </td>
+            </tr>
+        </table>
+    </form>
+</body>
+</html>
