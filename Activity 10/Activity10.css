@@ -1,0 +1,18 @@
+.formGroup {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    width: 100%;
+  }
+  
+  .formGroup label {
+    width: 200px; 
+  }
+  
+  .formGroup input {
+    width: 250px;
+    padding: 6px;
+    font-size: 14px;
+  }
+  
