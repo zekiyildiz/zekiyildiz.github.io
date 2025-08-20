@@ -1,3 +1,4 @@
+// js/main.js
 (function () {
     PIXI.settings.SCALE_MODE  = PIXI.SCALE_MODES.NEAREST;
     PIXI.settings.ROUND_PIXELS = true;
@@ -10,39 +11,41 @@
 
     // Modüller
     window.GameInitBackground();
+    // (Varsa) platform modülü background'dan sonra çağrılmalı
+    if (typeof window.GameInitPlatforms === "function") window.GameInitPlatforms();
     window.GameInitFooter();
-    window.GameInitIcons();   // icons.js yüklü olmalı
+    window.GameInitIcons();
     window.GameInitPlayer();
 
-    const { CFG, background, footer, icons, player } = window.Game;
 
-    // --- Tek loader burada ---
+
+    const { CFG, background, platforms, footer, icons, player } = window.Game;
+
+    // --- Tek loader ---
     const loader = PIXI.Loader.shared;
     const added  = new Set();
-
-    const safeAdd = (id, url) => {
-        if (!id || added.has(id)) return;
-        loader.add(id, url);
-        added.add(id);
-    };
+    const safeAdd = (id, url) => { if (id && !added.has(id)) { loader.add(id, url); added.add(id); } };
 
     // Temel kaynaklar
-    safeAdd("sheet",   CFG.SHEET_URL);
+    safeAdd("sheet",   CFG.SHEET_URL); // player sheet
     safeAdd("bg",      CFG.BG_URL);
-    safeAdd("github",  "assets/img/github.png");   // footer ve ICONS ikisi de bunu kullanabilir
+
+    // (Varsa) platform sheet
+    if (CFG.PLATFORM_SHEET_URL) safeAdd("platformSheet", CFG.PLATFORM_SHEET_URL);
+
+    // Footer ikonları
+    safeAdd("github",  "assets/img/github.png");
     safeAdd("linkedin","assets/img/linkedin.png");
 
-    // ICONS listesindeki TÜM görselleri ekle (tekrar varsa atlanır)
-    if (Array.isArray(CFG.ICONS)) {
-        CFG.ICONS.forEach(icon => safeAdd(icon.id, icon.img));
-    }
+    // BG içi ikon görselleri
+    if (Array.isArray(CFG.ICONS)) CFG.ICONS.forEach(icon => safeAdd(icon.id, icon.img));
 
-    // Teşhis için basit loglar
+    // Log & hata
     loader.onError.add(err => console.error("[loader error]", err?.message || err));
     loader.onLoad.add((ldr, res) => console.log("[loaded]", res.name));
 
     loader.load((ldr, res) => {
-        // background
+        // Background
         if (res.bg?.texture) {
             background.setTexture(res.bg.texture);
             background.layoutBackground();
@@ -50,17 +53,32 @@
             console.error("[bg] texture yok! ->", CFG.BG_URL);
         }
 
-        // footer
+        // Platformlar (modül ve sheet varsa)
+        // Platformlar
+        if (window.Game.platforms) {
+            if (res.platformSheet?.texture) {
+                platforms.setTexture(res.platformSheet.texture);   // setSheet değil, setTexture!
+            } else {
+                console.warn("[platforms] platformSheet yok ya da yüklenmedi:", CFG.PLATFORM_SHEET_URL);
+            }
+
+            if (Array.isArray(CFG.PLATFORM_DEFS)) {
+                platforms.addPlatforms(CFG.PLATFORM_DEFS);         // outline'lar hemen görünür
+            }
+            platforms.layoutAll();
+        }
+
+        // Footer (sabit sağ-alt)
         footer.setIcons(res.github?.texture, res.linkedin?.texture);
         footer.layoutFooter();
 
-        // Çoklu ikonlar
+        // BG içindeki ikonlar
         if (window.Game.icons?.setTextures) {
             icons.setTextures(res);
             icons.layoutAll();
         }
 
-        // player
+        // Player
         if (res.sheet?.texture?.baseTexture) {
             player.setSheet(res.sheet.texture.baseTexture);
             player.layoutPlayer();
@@ -70,10 +88,6 @@
     });
 
     // lifecycle
-    window.addEventListener("resize", () => {
-        window.Game.onResizeCbs.forEach(fn => fn && fn());
-    });
-    app.ticker.add(() => {
-        window.Game.onTickCbs.forEach(fn => fn && fn());
-    });
+    addEventListener("resize", () => window.Game.onResizeCbs.forEach(fn => fn && fn()));
+    app.ticker.add(() => window.Game.onTickCbs.forEach(fn => fn && fn()));
 })();
