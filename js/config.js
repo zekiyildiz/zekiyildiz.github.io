@@ -30,25 +30,34 @@ window.Game = {
             { x: 680, y: 260, w: 200, h: 10 },
         ],
 
-        // — ICONS: sadece BG içinde dolaşılacak ikonlar —
+        // — ICONS: BG içinde dolaşılacak ikonlar —
         ICONS: [
             {
                 id: "cv",
                 img: "assets/img/cv.png",
-                pin: "topleft",
-                offsetX: 16, offsetY: 16,
-                size: 40, radius: 60,
-                label: "CV",
-                hint: "Press Enter - Open CV",
-                action: { type: "link", url: "assets/img/cv/cv.pdf", target: "_blank" }
+                x: 20,   // istediğin X
+                y: 60,   // istediğin Y
+                size: 48,
+                hint: "Open CV",
+                action: { type: "link", url: "cv.pdf" }
             },
             {
-                id: "projects", img: "assets/img/projects.png",
-                pin: "topright",
-                offsetX: 16, offsetY: 16,
-                size: 34, radius: 60,
-                hint: "Press Enter – Projects",
-                action: { type: "route", name: "projects" }
+                id: "github",
+                img: "assets/img/github.png",
+                x: 950,
+                y: 150,
+                size: 48,
+                hint: "Visit GitHub",
+                action: { type: "link", url: "https://github.com/zekiyildiz" }
+            },
+            {
+                id: "linkedin",
+                img: "assets/img/linkedin.png",
+                x: 950,
+                y: 350,
+                size: 48,
+                hint: "Visit LinkedIn",
+                action: { type: "link", url: "https://linkedin.com/in/zekiyildiz/" },
             }
         ]
     },
