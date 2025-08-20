@@ -1,6 +1,5 @@
 (function () {
     function initPlayer() {
-        // Çifte init'e karşı emniyet
         if (window.Game.player) return;
 
         const { app, CFG, background } = window.Game;
@@ -28,12 +27,10 @@
         let walkFrames = null;
 
         function setSheet(baseTexture) {
-            // Spritesheet henüz valid değilse tekrar dener
             if (!baseTexture.valid) {
                 baseTexture.once("update", () => setSheet(baseTexture));
                 return;
             }
-            // idle: row 0, col 0-1 | walk: row 1, col 1-4
             idleFrames = makeFrames(baseTexture, 0, [0, 1]);
             walkFrames = makeFrames(baseTexture, 1, [1, 2, 3, 4]);
             setAnim("idle", true);
@@ -49,7 +46,8 @@
         function setAnim(name, reset = false) {
             if (current !== name || reset) {
                 current = name;
-                player.textures = (name === "idle") ? idleFrames : walkFrames;
+                if (name === "idle") player.textures = idleFrames;
+                else if (name === "walk") player.textures = walkFrames;
                 player.animationSpeed = (name === "idle") ? 0.12 : 0.16;
                 player.gotoAndPlay(0);
             }
@@ -59,56 +57,77 @@
         const keys = {};
         addEventListener("keydown", e => {
             const c = e.code;
-            if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Space"].includes(c)) e.preventDefault();
+            if (["ArrowLeft","ArrowRight","Space"].includes(c)) e.preventDefault();
             keys[c] = true;
         });
-        addEventListener("keyup",   e => { keys[e.code] = false; });
+        addEventListener("keyup", e => { keys[e.code] = false; });
+
+        // --- Fizik Değişkenleri ---
+        let vy = 0;
+        // --- Parametreler (daha yumuşak) ---
+        const SPEED        = 4.4;   // 2.0 → 1.4
+        const GRAVITY      = 0.45;  // 0.8 → 0.45
+        const JUMP_STRENGTH= -9.5;  // -12 → -9.5
+        const MAX_FALL     = 10.0;  // terminal hız
+        let onGround = false;
 
         function tick() {
-            const moving = keys.ArrowLeft || keys.ArrowRight || keys.ArrowUp || keys.ArrowDown;
-            setAnim(moving ? "walk" : "idle");
+            // dt: 60 FPS'te ~1, 30 FPS'te ~2 olur → hız sabit kalır
+            const dt = app.ticker.deltaTime;
 
-            let dx = 0, dy = 0;
-            if (keys.ArrowLeft)  dx -= 2;
-            if (keys.ArrowRight) dx += 2;
-            if (keys.ArrowUp)    dy -= 2;
-            if (keys.ArrowDown)  dy += 2;
+            let dx = 0;
+            if (keys.ArrowLeft)  dx -= SPEED * dt;
+            if (keys.ArrowRight) dx += SPEED * dt;
 
-            // Diagonal hız normalizasyonu (√2 artışı engelle)
-            if (dx && dy) {
-                const INV_SQRT2 = 0.70710678;
-                dx *= INV_SQRT2; dy *= INV_SQRT2;
-            }
-
-            // Yön flip'i
             if (dx < 0) player.scale.x = -CFG.SCALE;
             if (dx > 0) player.scale.x =  CFG.SCALE;
 
-            player.x = Math.round(player.x + dx);
-            player.y = Math.round(player.y + dy);
+            const moving = Math.abs(dx) > 0.01;
+            setAnim(moving ? "walk" : "idle");
 
-            clampToBackground();
+            // Zıplama (yerdeyken)
+            if (keys.Space && onGround) {
+                vy = JUMP_STRENGTH;   // tek atım
+                onGround = false;
+            }
+
+            // Yerçekimi
+            vy += GRAVITY * dt;
+            if (vy > MAX_FALL) vy = MAX_FALL;
+
+            player.y += vy;
+
+            // Zemin
+            const pad = (CFG.GRID_W * CFG.SCALE) / 2;
+            const b = background.getBounds();
+            const footerTop = app.screen.height - CFG.FOOTER_H;
+            const groundY = Math.floor(Math.min(b.bottom - pad, footerTop - pad));
+
+            if (player.y >= groundY) {
+                player.y = groundY;
+                vy = 0;
+                onGround = true;
+            }
+
+            // X hareketi + sınır
+            player.x = Math.round(player.x + dx);
+            clampToBackground(); // senin fonksiyonun (X’i kısıtlaması yeterli)
         }
 
         function clampToBackground() {
-            // BG sınırları + footer üstü
             const pad = (CFG.GRID_W * CFG.SCALE) / 2;
             const b = background.getBounds();
             const footerTop = app.screen.height - CFG.FOOTER_H;
 
             const minX = Math.ceil(b.left  + pad);
             const maxX = Math.floor(b.right - pad);
-            const minY = Math.ceil(b.top   + pad);
-            const maxY = Math.floor(Math.min(b.bottom - pad, footerTop - pad));
 
             player.x = Math.max(minX, Math.min(maxX, player.x));
-            player.y = Math.max(minY, Math.min(maxY, player.y));
         }
 
         // Dışa aç
         window.Game.player = { sprite: player, layoutPlayer, setSheet, tick };
 
-        // Lifecycle kayıtları
         window.Game.onResizeCbs.push(layoutPlayer);
         window.Game.onTickCbs.push(tick);
     }
