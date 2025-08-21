@@ -5,6 +5,7 @@ window.Game = {
         SHEET_URL: "assets/img/player_sprites.png",        // PLAYER spritesheet
         BG_URL:    "assets/img/background.png",
 
+        SOUND_URL: "assets/snd/sound.wav",
         GRID_W: 24,
         GRID_H: 24,
         SCALE: 3,
@@ -20,14 +21,14 @@ window.Game = {
         PLATFORM_SHEET_URL: "assets/img/texture.png",
 
         PLATFORM_DEFS: [
-            { x: 250, y: 220, w: 220, h: 10 },
-            { x: 340, y: 380, w: 220, h: 10 },
-            { x: 620, y: 540, w: 160, h: 10 },
-            { x: 780, y: 620, w: 200, h: 10 },
-            { x: 1040, y: 520, w: 200, h: 10 },
-            { x: 1040, y: 320, w: 200, h: 10 },
-            { x: 780, y: 420, w: 200, h: 10 },
-            { x: 680, y: 260, w: 200, h: 10 },
+            { x: 0, y: 120, w: 220, h: 10 },
+            { x: 400, y: 480, w: 220, h: 10 },
+            { x: 750, y: 400, w: 260, h: 10 },
+            { x: 550, y: 250, w: 200, h: 10 },
+            { x: 900, y: 150, w: 100, h: 10 },
+            { x: 250, y: 200, w: 200, h: 10 },
+
+
         ],
 
         // — ICONS: BG içinde dolaşılacak ikonlar —
@@ -45,7 +46,7 @@ window.Game = {
                 id: "github",
                 img: "assets/img/github.png",
                 x: 950,
-                y: 150,
+                y: 100,
                 size: 48,
                 hint: "Visit GitHub",
                 action: { type: "link", url: "https://github.com/zekiyildiz" }

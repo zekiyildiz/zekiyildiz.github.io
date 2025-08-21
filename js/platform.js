@@ -4,88 +4,77 @@
     function initPlatforms() {
         const { app, background, CFG } = window.Game;
 
-        // 1) Container'ı background'un HEMEN ÜSTÜNE koy
+        // BG'nin hemen üst katmanı (transform kilidi yok!)
         const container = new PIXI.Container();
         const bgIndex = app.stage.getChildIndex(background.sprite);
         app.stage.addChildAt(container, bgIndex + 1);
 
-        const list = []; // { sprite, def }
+        const list = [];               // { sprite, def }
         let platformTexture = null;
-
-        // İstersen debug çerçevesini aç/kapat
         const DEBUG_OUTLINE = true;
 
-        // --- Yerleşim (BG sol-üst referanslı x,y) ---
+        // --- BG referanslı tekil yerleşim ---
         function layoutOne(rec) {
-            const b = background.getBounds();
+            const b = background.getBounds();  // BG'nin ekrandaki sınırları
             const { def, sprite } = rec;
 
-            let x = def.x;
-            let y = def.y;
+            // Pozisyon: BG sol-üst + relatif offset
+            sprite.x = Math.round(b.left + (def.x || 0));
+            sprite.y = Math.round(b.top  + (def.y || 0));
 
-            sprite.x = Math.round(x);
-            sprite.y = Math.round(y);
+            // Boyut: sabit piksel
+            sprite.width  = def.w;
+            sprite.height = def.h;
 
-            // Sprite ise genişlik/yükseklik ver; Graphics ise scale yerine çizim boyutu sabit
-            if (sprite instanceof PIXI.Sprite) {
-                sprite.width  = def.w;
-                sprite.height = def.h;
-            } else if (sprite.__outline && sprite.__size) {
-                // Graphics debug: outline'ı def boyutuna uydur
-                const { w, h } = def;
-                if (sprite.__size.w !== w || sprite.__size.h !== h) {
-                    sprite.__outline.clear().lineStyle(1, 0xff55ff, 1).drawRect(0, 0, w, h);
-                    sprite.__size = { w, h };
-                }
+            // (Opsiyonel) debug rect'i yeniden çiz
+            if (sprite.__debug) {
+                sprite.__debug.clear().lineStyle(1, 0xff55ff, 1).drawRect(0, 0, def.w, def.h);
             }
         }
+
         function layoutAll() { list.forEach(layoutOne); }
 
         // --- Platform ekle ---
         function addPlatform(def) {
-            let obj;
+            let spr;
 
             if (platformTexture) {
-                const spr = new PIXI.Sprite(platformTexture);
-                spr.anchor.set(0, 0);
-                spr.roundPixels = true;
-                obj = spr;
+                spr = new PIXI.Sprite(platformTexture);
             } else {
-                // Texture henüz yoksa: görünür olması için geçici grafik
-                const g = new PIXI.Container();
-                const outline = new PIXI.Graphics();
-                outline.lineStyle(1, 0xff55ff, 1).drawRect(0, 0, def.w, def.h);
-                g.addChild(outline);
-                g.__outline = outline;
-                g.__size = { w: def.w, h: def.h };
-                obj = g;
+                // texture gelene kadar görünür placeholder (mor dolu)
+                const g = new PIXI.Graphics();
+                g.beginFill(0x9b59b6).drawRect(0, 0, def.w, def.h).endFill();
+                spr = g;
             }
 
-            if (DEBUG_OUTLINE && obj instanceof PIXI.Sprite) {
+            spr.anchor?.set?.(0, 0);
+            spr.roundPixels = true;
+
+            // Debug outline
+            if (DEBUG_OUTLINE) {
                 const o = new PIXI.Graphics();
                 o.lineStyle(1, 0xff55ff, 1).drawRect(0, 0, def.w, def.h);
-                obj.addChild(o);
+                spr.addChild(o);
+                spr.__debug = o;
             }
 
-            container.addChild(obj);
-            const rec = { sprite: obj, def };
+            container.addChild(spr);
+            const rec = { sprite: spr, def };
             list.push(rec);
             layoutOne(rec);
-            return obj;
+            return spr;
         }
 
-        function addPlatforms(defs) { return (defs || []).map(addPlatform); }
+        function addPlatforms(defs) { (defs || []).forEach(addPlatform); }
 
-        // --- Texture set et (texture.png komple) ---
+        // --- texture.png gelince var olanları Sprite'a çevir / güncelle ---
         function setTexture(tex) {
             if (!tex) return;
             platformTexture = tex;
 
-            // Var olanlardan Graphics olanları Sprite'a çevir
             for (let i = 0; i < list.length; i++) {
                 const rec = list[i];
                 if (!(rec.sprite instanceof PIXI.Sprite)) {
-                    // Eski graphics'i kaldır
                     const idx = container.getChildIndex(rec.sprite);
                     container.removeChildAt(idx);
 
@@ -93,11 +82,11 @@
                     spr.anchor.set(0, 0);
                     spr.roundPixels = true;
 
-                    // İsteğe bağlı debug outline
                     if (DEBUG_OUTLINE) {
                         const o = new PIXI.Graphics();
                         o.lineStyle(1, 0xff55ff, 1).drawRect(0, 0, rec.def.w, rec.def.h);
                         spr.addChild(o);
+                        spr.__debug = o;
                     }
 
                     container.addChildAt(spr, idx);
@@ -105,26 +94,24 @@
                 } else {
                     rec.sprite.texture = platformTexture;
                 }
-                // Genişlik/yükseklik güncel
+                // Boyut/pozisyonları her ihtimale karşı güncelle
                 rec.sprite.width  = rec.def.w;
                 rec.sprite.height = rec.def.h;
                 layoutOne(rec);
             }
         }
 
-
-
-        // Dışa aç
+        // dışa aç
         window.Game.platforms = {
             container,
             list,
             addPlatform,
             addPlatforms,
-            setTexture,     // main.js: platforms.setTexture(res.platformSheet.texture)
+            setTexture,
             layoutAll
         };
 
-        // Resize’da BG kaydıkça yeniden hizala
+        // BG yeniden yerleştiğinde biz de yeniden hizalayalım
         window.Game.onResizeCbs.push(layoutAll);
     }
 
