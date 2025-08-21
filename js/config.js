@@ -40,7 +40,7 @@ window.Game = {
                 y: 60,   // istediğin Y
                 size: 48,
                 hint: "Open CV",
-                action: { type: "link", url: "cv.pdf" }
+                action: { type: "link", url: "/assets/img/cv/cv.pdf", target: "_blank" }
             },
             {
                 id: "github",
