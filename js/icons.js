@@ -4,26 +4,25 @@
     function initIcons() {
         const { app } = window.Game;
 
-        const icons = []; // { conf, sprite, highlight, hint, pulse, isNear, layout, tick }
+        const icons = []; // { conf, wrap, sprite, highlight, hint, box, layout, tick, isNear }
         const byId  = {};
 
         function createIcon(conf, texture) {
-            // 1) Sabit kutu boyu
+            // 1) Sabit kutu boyu (hit/hover kutusu)
             const BOX = conf.boxSize ?? (conf.size ?? 28);
 
-            // 2) Bir wrapper container kullan
-            const wrap = new PIXI.Container();
+            // 2) Wrapper + sprite
+            const wrap   = new PIXI.Container();
             const sprite = new PIXI.Sprite(texture);
             wrap.addChild(sprite);
 
-            // Boyutlandırma (sprite’ı BOX içine sığdır)
+            // Sprite’ı BOX içine sığdır
             const texW = texture?.orig?.width  || sprite.width;
             const texH = texture?.orig?.height || sprite.height;
             const scale = (conf.size ?? BOX) / Math.max(texW, texH); // uzun kenara göre sığdır
             sprite.scale.set(scale);
             sprite.anchor.set(0, 0);
 
-            // Sprite’ı kutunun ortasına koy
             const sw = texW * scale, sh = texH * scale;
             sprite.x = (BOX - sw) / 2;
             sprite.y = (BOX - sh) / 2;
@@ -39,8 +38,7 @@
             highlight.visible = false;
             wrap.addChild(highlight);
 
-            // Hint: alta ortalı, parent ölçeğinden bağımsız
-            // Hint: üste ortalı
+            // Hint: ikonun ÜSTÜNDE, parent ölçeğinden bağımsız
             const hint = new PIXI.Text(
                 conf.hint || "Press Enter",
                 new PIXI.TextStyle({
@@ -50,11 +48,10 @@
                     align: "center"
                 })
             );
-            hint.anchor.set(0.5, 1);  // ortala ve tabanını yukarıya yasla
+            hint.anchor.set(0.5, 1);  // ortala ve taban yukarıda
             hint.x = BOX / 2;
             hint.y = -6;              // ikonun hemen üstünde
             hint.visible = false;
-            // wrap ölçeklenirse sabit kalsın:
             const setHintInverseScale = () => hint.scale.set(1 / wrap.scale.x, 1 / wrap.scale.y);
             setHintInverseScale();
             wrap.addChild(hint);
@@ -100,7 +97,7 @@
 
                 if (isNear) {
                     pulse += 0.1;
-                    const factor = 1.0 + Math.sin(pulse) * 0.05;
+                    const factor = 1.0 + Math.sin(pulse) * 0.05; // hafif puls
                     wrap.scale.set(factor);
                     wrap.tint = 0xffffaa;
                     setHintInverseScale(); // puls sırasında da metni sabit tut
@@ -109,22 +106,10 @@
 
             // Sahneye ekle ve kaydet
             app.stage.addChild(wrap);
-            const rec = { conf, sprite, highlight, hint, layout, tick, wrap };
+            const rec = { conf, wrap, sprite, highlight, hint, layout, tick, isNear: false, box: BOX };
             icons.push(rec);
             byId[conf.id] = rec;
             return rec;
-        }
-
-        // BG’ye sabitleme isteyenler için (kullanmak istemiyorsan config’te pin’i sil)
-        function computePinnedXY(pin, offsetX, offsetY, w, h) {
-            const b = window.Game.background.getBounds();
-            switch (pin) {
-                case "topleft":     return { x: b.left  + offsetX,        y: b.top    + offsetY };
-                case "topright":    return { x: b.right - offsetX - w,    y: b.top    + offsetY };
-                case "bottomleft":  return { x: b.left  + offsetX,        y: b.bottom - offsetY - h };
-                case "bottomright": return { x: b.right - offsetX - w,    y: b.bottom - offsetY - h };
-                default:            return { x: b.left + (offsetX||0), y: b.top + (offsetY||0) };
-            }
         }
 
         function triggerAction(action) {
@@ -147,26 +132,27 @@
         function layoutAll() { icons.forEach(i => i.layout()); }
         function tickAll()   { icons.forEach(i => i.tick()); }
 
-        // Enter → en yakın ikona aksiyon
+        // Enter → en yakın ikona aksiyon (Ana Enter + Numpad Enter)
         function onKey(e) {
-            if (e.code !== "Enter") return;
+            const isEnter = (e.key === 'Enter') || (e.code === 'Enter') || (e.code === 'NumpadEnter');
+            if (!isEnter) return;
+            e.preventDefault();
+
             const p = window.Game.player?.sprite;
             if (!p) return;
 
             const near = icons.filter(i => {
-                const cx = i.sprite.x + i.sprite.width  / 2;
-                const cy = i.sprite.y + i.sprite.height / 2;
+                const cx = i.wrap.x + i.box / 2;
+                const cy = i.wrap.y + i.box / 2;
                 const dx = p.x - cx, dy = p.y - cy;
-                const rad = i.conf.radius || Math.max(32, i.sprite.width * 1.5);
+                const rad = i.conf.radius || Math.max(32, i.box * 1.5);
                 return Math.hypot(dx, dy) <= rad;
             });
 
             if (near.length) {
                 near.sort((a,b) => {
-                    const ax = a.sprite.x + a.sprite.width  / 2;
-                    const ay = a.sprite.y + a.sprite.height / 2;
-                    const bx = b.sprite.x + b.sprite.width  / 2;
-                    const by = b.sprite.y + b.sprite.height / 2;
+                    const ax = a.wrap.x + a.box / 2, ay = a.wrap.y + a.box / 2;
+                    const bx = b.wrap.x + b.box / 2, by = b.wrap.y + b.box / 2;
                     const da = (p.x-ax)**2 + (p.y-ay)**2;
                     const db = (p.x-bx)**2 + (p.y-by)**2;
                     return da - db;
@@ -174,7 +160,7 @@
                 triggerAction(near[0].conf.action);
             }
         }
-        window.addEventListener("keydown", onKey);
+        window.addEventListener("keydown", onKey, { capture: true });
 
         // Dışa aç
         window.Game.icons = { setTextures, layoutAll, tickAll, byId };

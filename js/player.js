@@ -18,7 +18,7 @@
         };
 
         // ------------ Hitbox / çarpışma yardımcıları ------------
-        const HITBOX = { top: 4, bottom: 10, left: 6, right: 6 }; // ince ayar yapabilirsin
+        const HITBOX = { top: 4, bottom: 10, left: 6, right: 6 }; // ince ayar yapılabilir
         const EPS = 0.001;
 
         function getHalfSizes() {
@@ -88,8 +88,9 @@
                 currentAnim = name;
                 if (name === "idle") {
                     player.textures = idleFrames; player.animationSpeed = 0.12; player.loop = true;
-                } else { // walk ya da jump yoksa da yürüyüşle idare
-                    player.textures = walkFrames; player.animationSpeed = 0.14; player.loop = true;
+                } else {
+                    // "walk" veya "jump" için aynı yürüyüş frameslerini kullanıyoruz (jump yoksa)
+                    player.textures = walkFrames;  player.animationSpeed = 0.14; player.loop = true;
                 }
                 player.gotoAndPlay(0);
             }
@@ -104,26 +105,28 @@
         });
         addEventListener("keyup", e => { keys[e.code] = false; });
 
-        // ------------ Fizik ------------
-        let vy = 0;
-        const SPEED = 4.6;
-        const GRAVITY = 0.5;
-        const JUMP_STRENGTH = -9.5;
-        const MAX_FALL = 10.0;
+        // ------------ Fizik (saniye bazlı) ------------
+        // px/s ve px/s^2 cinsinden sabitler
+        const H_SPEED       = 270;   // yatay hız (px/s)
+        const GRAVITY       = 1800;  // yerçekimi (px/s^2)
+        const JUMP_VELOCITY = -820;  // zıplama ilk hızı (px/s)
+        const MAX_FALL      = 900;   // terminal düşüş (px/s)
+        let vy = 0;                  // dikey hız (px/s)
         let onGround = false;
 
         function tick() {
-            const dt = app.ticker.deltaTime;
+            // saniye cinsinden dt (33ms clamp jitter'ı azaltır)
+            const dt = Math.min(0.033, app.ticker.elapsedMS / 1000);
 
             const { hw, hh } = getHalfSizes();
             const b = background.getBounds();
             const floorY = Math.floor(Math.min(b.bottom - hh, (app.screen.height - CFG.FOOTER_H) - hh));
             const ceilY  = Math.ceil(b.top + hh);
 
-            // --- X hareketi
+            // --- X hareketi (px = (px/s) * s)
             let dx = 0;
-            if (keys.ArrowLeft)  dx -= SPEED * dt;
-            if (keys.ArrowRight) dx += SPEED * dt;
+            if (keys.ArrowLeft)  dx -= H_SPEED * dt;
+            if (keys.ArrowRight) dx += H_SPEED * dt;
 
             if (dx < 0) player.scale.x = -CFG.SCALE;
             if (dx > 0) player.scale.x =  CFG.SCALE;
@@ -132,9 +135,9 @@
             const moving = Math.abs(dx) > 0.01;
             if (onGround) setAnim(moving ? "walk" : "idle");
 
-            // --- Zıplama + yerçekimi
+            // --- Zıplama + yerçekimi (vy px/s)
             if ((keys.Space || keys.ArrowUp) && onGround) {
-                vy = JUMP_STRENGTH; onGround = false;
+                vy = JUMP_VELOCITY; onGround = false;
             }
             vy += GRAVITY * dt;
             if (vy > MAX_FALL) vy = MAX_FALL;
@@ -147,7 +150,7 @@
 
             // 2) Y çöz
             const prevY = player.y;
-            player.y += vy;
+            player.y += vy * dt;           // saniye bazlı hareket
 
             // tavan
             if (player.y < ceilY) { player.y = ceilY; if (vy < 0) vy = 0; }
@@ -162,7 +165,7 @@
                 onGround = false;
             }
 
-            if (!onGround) setAnim("walk"); // ayrı jump setin yok; yürüyüşle dönsün
+            if (!onGround) setAnim("walk"); // ayrı jump setin yoksa yürüyüşle idare
         }
 
         // --- Yan çarpışma ---
